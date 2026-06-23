@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 from .database import get_db_connection
 
-def seed_database():
-    csv_path = Path(__file__).parent.parent / "data" / "ipc.csv"
+def seed_database(force: bool = False):
+    csv_path = Path(__file__).parent.parent / "data" / "ipc_sections.csv"
     if not csv_path.exists():
         print(f"CSV file not found at {csv_path}. Skipping seed.")
         return {"error": f"CSV not found at {csv_path}"}
@@ -16,7 +16,11 @@ def seed_database():
     cursor.execute("SELECT COUNT(*) FROM ipc_sections")
     count = cursor.fetchone()[0]
     if count > 0:
-        return {"message": "Database already seeded."}
+        if force:
+            cursor.execute("DELETE FROM ipc_sections")
+            cursor.execute("DELETE FROM ipc_fts")
+        else:
+            return {"message": "Database already seeded. Pass force=True to reseed."}
         
     records = []
     with open(csv_path, 'r', encoding='utf-8-sig') as f:

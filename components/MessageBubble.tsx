@@ -1,8 +1,8 @@
 import ReactMarkdown from 'react-markdown';
 import SourceCard from './SourceCard';
-import { Scale } from 'lucide-react';
+import { Scale, BrainCircuit, Loader2 } from 'lucide-react';
 
-export default function MessageBubble({ role, content, sources }: { role: string, content: string, sources?: any[] }) {
+export default function MessageBubble({ role, content, sources, isStreaming = false }: { role: string, content: string, sources?: any[], isStreaming?: boolean }) {
   const isUser = role === 'user';
 
   if (isUser) {
@@ -15,16 +15,58 @@ export default function MessageBubble({ role, content, sources }: { role: string
     );
   }
 
+  let thinkContent = '';
+  let mainContent = content;
+
+  // Extract <think> block specifically for DeepSeek models
+  const thinkMatch = content.match(/<think>([\s\S]*?)(?:<\/think>|$)/);
+  if (thinkMatch) {
+    thinkContent = thinkMatch[1].trim();
+    mainContent = content.replace(/<think>[\s\S]*?(?:<\/think>|$)/, '').trim();
+  }
+
+  const isEmpty = !mainContent && !thinkContent;
+
   return (
     <div className="flex gap-4 mb-10">
       <div className="w-8 h-8 rounded-full bg-black shrink-0 flex items-center justify-center text-white mt-1">
         <Scale size={16} strokeWidth={2.5} />
       </div>
       <div className="flex-1 min-w-0">
+        
+        {/* Loading indicator — shown while streaming and no content yet */}
+        {isStreaming && isEmpty && (
+          <div className="flex items-center gap-3 py-4">
+            <Loader2 size={18} className="animate-spin text-zinc-400" />
+            <span className="text-zinc-400 text-sm font-medium">Analyzing your query...</span>
+            <span className="flex gap-1">
+              <span className="w-1.5 h-1.5 bg-zinc-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+              <span className="w-1.5 h-1.5 bg-zinc-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+              <span className="w-1.5 h-1.5 bg-zinc-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+            </span>
+          </div>
+        )}
+
+        {thinkContent && (
+          <div className="mb-6 overflow-hidden rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-600 text-sm">
+            <div className="px-4 py-2 bg-zinc-100/50 border-b border-zinc-100 font-medium flex items-center gap-2">
+              <BrainCircuit size={16} className={content.includes('</think>') ? 'text-zinc-400' : 'text-blue-500 animate-pulse'} />
+              {content.includes('</think>') ? 'Thought Process' : 'Thinking...'}
+            </div>
+            <div className="px-4 py-3 whitespace-pre-wrap font-mono text-[13px] leading-relaxed max-h-96 overflow-y-auto">
+              {thinkContent}
+            </div>
+          </div>
+        )}
+
         <div className="prose prose-zinc max-w-none text-zinc-900">
-          {content || <span className="animate-pulse font-mono text-zinc-400">_</span>}
-          <ReactMarkdown>{content}</ReactMarkdown>
+          {mainContent && <ReactMarkdown>{mainContent}</ReactMarkdown>}
         </div>
+
+        {/* Streaming cursor — shown when actively receiving text */}
+        {isStreaming && mainContent && (
+          <span className="inline-block w-2 h-4 bg-zinc-800 animate-pulse ml-0.5 -mb-0.5 rounded-sm"></span>
+        )}
         
         {sources && sources.length > 0 && (
           <div className="mt-6">

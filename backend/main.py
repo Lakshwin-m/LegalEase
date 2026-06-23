@@ -27,10 +27,11 @@ class SessionCreate(BaseModel):
 class ChatMessage(BaseModel):
     sessionId: str
     message: str
+    language: str = "English"
 
 @app.get("/api/seed")
-def api_seed():
-    return seed_database()
+def api_seed(force: bool = False):
+    return seed_database(force=force)
 
 @app.get("/api/sessions")
 def get_sessions():
@@ -64,10 +65,21 @@ def get_session_messages(session_id: str):
     conn.close()
     return messages
 
+@app.delete("/api/sessions/{session_id}")
+def delete_session(session_id: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+    cursor.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+    conn.commit()
+    conn.close()
+    return {"success": True}
+
 @app.post("/api/chat")
 async def chat_endpoint(data: ChatMessage):
     session_id = data.sessionId
     message = data.message
+    language = data.language
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -91,39 +103,52 @@ async def chat_endpoint(data: ChatMessage):
     sources = search_ipc(message)
     sources_json = json.dumps(sources)
     
-    context_str = "RELEVANT IPC SECTIONS:\n---\n"
+    context_str = ""
     for src in sources:
-        context_str += f"Section {src['section']}: {src['offense']} | Punishment: {src['punishment']}\n{src['description']}\n---\n"
+        # Truncate long descriptions to keep context small and speed up inference
+        desc = src['description']
+        if len(desc) > 500:
+            desc = desc[:500] + "..."
+        context_str += f"Section {src['section']}: {src['offense']} | Punishment: {src['punishment']}\n{desc}\n---\n"
         
-    system_prompt = f"""You are a legal assistant specializing in Indian law (IPC).
-Answer only based on the IPC sections provided below.
-If the answer is not in the context, say so clearly.
-Never fabricate section numbers or punishments.
-Always recommend consulting a lawyer for personal legal matters.
+    system_prompt = f"""You are a friendly Indian law (IPC) assistant. You MUST respond entirely in {language}.
 
+IPC SECTIONS:
 {context_str}
 
 RULES:
-- Only answer based on the IPC sections provided above.
-- If no relevant section is found, say: "I could not find a relevant IPC section for this query. Please consult a legal professional."
-- Never give personal legal advice or predict case outcomes.
-- Always end responses with: "This is for informational purposes only. Consult a qualified lawyer for legal advice."
-- Do not answer questions unrelated to Indian law."""
+- Respond ONLY in {language}. Every word of your response must be in {language}.
+- Explain legal terms in simple, plain language that a 15-year-old can understand.
+- After stating the law, give a short real-life example to illustrate it.
+- Avoid legal jargon. If you must use a legal term, immediately explain it in brackets.
+- Structure: 1) What the law says (simplified) 2) Punishment 3) Simple example 4) Disclaimer.
+- If no relevant section found, say so in {language}.
+- End with a disclaimer to consult a lawyer, in {language}.
+- Do not answer non-law questions."""
 
-    cursor.execute("SELECT role, content FROM messages WHERE session_id = ? ORDER BY created_at ASC", (session_id,))
+    # Only keep last 6 messages for context to avoid bloating the prompt
+    cursor.execute("SELECT role, content FROM messages WHERE session_id = ? ORDER BY created_at DESC LIMIT 6", (session_id,))
     history = [{"role": r['role'], "content": r['content']} for r in cursor.fetchall()]
+    history.reverse()
     conn.close()
     
     messages_payload = [{"role": "system", "content": system_prompt}] + history
     
     model = os.environ.get("OLLAMA_MODEL", "deepseek-r1:latest")
     
+    # Ollama performance options
+    ollama_options = {
+        "num_ctx": 2048,       # Smaller context window = faster processing
+        "num_predict": 512,    # Max tokens to generate
+        "temperature": 0.3,    # Lower = faster, more deterministic
+    }
+    
     async def response_generator():
         full_response = []
         base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
         try:
             async with httpx.AsyncClient() as client:
-                async with client.stream("POST", f"{base_url}/api/chat", json={"model": model, "messages": messages_payload, "stream": True}, timeout=None) as response:
+                async with client.stream("POST", f"{base_url}/api/chat", json={"model": model, "messages": messages_payload, "stream": True, "options": ollama_options}, timeout=None) as response:
                     response.raise_for_status()
                     async for chunk in response.aiter_lines():
                         if not chunk: continue

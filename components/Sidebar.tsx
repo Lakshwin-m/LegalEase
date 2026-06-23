@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Plus, MessageSquare, Menu, X } from 'lucide-react';
+import { Plus, MessageSquare, Menu, X, Trash2 } from 'lucide-react';
 
 export default function Sidebar() {
   const [sessions, setSessions] = useState<any[]>([]);
@@ -79,21 +79,38 @@ export default function Sidebar() {
               {sessions.map((s) => {
                 const isActive = pathname === `/chat/${s.id}`;
                 return (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      router.push(`/chat/${s.id}`);
-                      setIsOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-3 truncate ${
-                      isActive 
-                        ? 'bg-zinc-200/60 text-black font-medium' 
-                        : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900'
-                    }`}
-                  >
-                    <MessageSquare size={16} className="shrink-0 opacity-60" />
-                    <span className="truncate">{s.title}</span>
-                  </button>
+                  <div key={s.id} className="relative group">
+                    <button
+                      onClick={() => {
+                        router.push(`/chat/${s.id}`);
+                        setIsOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-3 truncate pr-10 ${
+                        isActive 
+                          ? 'bg-zinc-200/60 text-black font-medium' 
+                          : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900'
+                      }`}
+                    >
+                      <MessageSquare size={16} className="shrink-0 opacity-60" />
+                      <span className="truncate">{s.title}</span>
+                    </button>
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await fetch(`http://127.0.0.1:8000/api/sessions/${s.id}`, { method: 'DELETE' });
+                          setSessions(prev => prev.filter(session => session.id !== s.id));
+                          if (isActive) router.push('/');
+                        } catch (err) {
+                          console.error(err);
+                        }
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-md opacity-0 group-hover:opacity-100 transition-all"
+                      title="Delete chat"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 );
               })}
             </div>
