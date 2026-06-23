@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Plus, MessageSquare, Menu, X, Trash2 } from 'lucide-react';
+import { Plus, MessageSquare, Menu, X, Trash2, BookOpen, BookA } from 'lucide-react';
 
 export default function Sidebar() {
   const [sessions, setSessions] = useState<any[]>([]);
@@ -60,14 +60,38 @@ export default function Sidebar() {
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <div className="p-4 md:p-6 pb-4">
-          <h1 className="text-xl font-bold tracking-tight text-black mb-6">LegalEase</h1>
-          <button 
-            onClick={handleNewChat}
-            className="w-full flex items-center justify-center gap-2 bg-black text-white px-4 py-2.5 rounded-lg font-medium hover:bg-zinc-800 transition-colors shadow-sm"
-          >
-            <Plus size={18} strokeWidth={2.5} />
-            <span>New Chat</span>
-          </button>
+          <h1 className="text-xl font-bold tracking-tight text-black mb-4">LegalEase</h1>
+          <div className="space-y-2">
+            <button 
+              onClick={handleNewChat}
+              className="w-full flex items-center justify-center gap-2 bg-black text-white px-4 py-2.5 rounded-lg font-medium hover:bg-zinc-800 transition-colors shadow-sm"
+            >
+              <Plus size={18} strokeWidth={2.5} />
+              <span>New Chat</span>
+            </button>
+            <button 
+              onClick={() => { router.push('/search'); setIsOpen(false); }}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm border ${
+                pathname === '/search'
+                  ? 'bg-zinc-900 text-white border-zinc-900'
+                  : 'bg-white text-black border-zinc-200 hover:bg-zinc-50'
+              }`}
+            >
+              <BookOpen size={18} strokeWidth={2} />
+              <span>Legal Knowledge</span>
+            </button>
+            <button 
+              onClick={() => { router.push('/dictionary'); setIsOpen(false); }}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm border ${
+                pathname === '/dictionary'
+                  ? 'bg-zinc-900 text-white border-zinc-900'
+                  : 'bg-white text-black border-zinc-200 hover:bg-zinc-50'
+              }`}
+            >
+              <BookA size={18} strokeWidth={2} />
+              <span>Dictionary</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 pb-6">
