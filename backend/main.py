@@ -111,20 +111,31 @@ async def chat_endpoint(data: ChatMessage):
             desc = desc[:500] + "..."
         context_str += f"Section {src['section']}: {src['offense']} | Punishment: {src['punishment']}\n{desc}\n---\n"
         
-    system_prompt = f"""You are a friendly Indian law (IPC) assistant. You MUST respond entirely in {language}.
+    lang_instruction = ""
+    if language != "English":
+        lang_instruction = f"""
+CRITICAL LANGUAGE INSTRUCTION:
+You MUST write your ENTIRE response in {language} script/language.
+Do NOT use English at all. Not even for section numbers — write them as numerals only.
+If the user writes in English, you still reply in {language}.
+Start your response with a greeting in {language}."""
+
+    system_prompt = f"""You are a friendly Indian law (IPC) assistant.
+{lang_instruction}
 
 IPC SECTIONS:
 {context_str}
 
 RULES:
-- Respond ONLY in {language}. Every word of your response must be in {language}.
+- Respond ONLY in {language}. Every single sentence must be in {language}.
 - Explain legal terms in simple, plain language that a 15-year-old can understand.
 - After stating the law, give a short real-life example to illustrate it.
 - Avoid legal jargon. If you must use a legal term, immediately explain it in brackets.
 - Structure: 1) What the law says (simplified) 2) Punishment 3) Simple example 4) Disclaimer.
 - If no relevant section found, say so in {language}.
 - End with a disclaimer to consult a lawyer, in {language}.
-- Do not answer non-law questions."""
+- Do not answer non-law questions.
+- REMEMBER: Your response language is {language}. Not English."""
 
     # Only keep last 6 messages for context to avoid bloating the prompt
     cursor.execute("SELECT role, content FROM messages WHERE session_id = ? ORDER BY created_at DESC LIMIT 6", (session_id,))
@@ -134,13 +145,13 @@ RULES:
     
     messages_payload = [{"role": "system", "content": system_prompt}] + history
     
-    model = os.environ.get("OLLAMA_MODEL", "deepseek-r1:latest")
+    model = os.environ.get("OLLAMA_MODEL", "gemma3:4b")
     
-    # Ollama performance options
+    # Ollama performance options — gemma3:4b handles larger context well
     ollama_options = {
-        "num_ctx": 2048,       # Smaller context window = faster processing
-        "num_predict": 512,    # Max tokens to generate
-        "temperature": 0.3,    # Lower = faster, more deterministic
+        "num_ctx": 4096,
+        "num_predict": 768,
+        "temperature": 0.4,
     }
     
     async def response_generator():
