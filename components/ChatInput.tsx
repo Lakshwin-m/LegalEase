@@ -1,43 +1,62 @@
-'use client';
+import { ArrowUp } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 
-import { useState, KeyboardEvent } from 'react';
-
-export default function ChatInput({ onSend, disabled }: { onSend: (msg: string) => void, disabled?: boolean }) {
+export default function ChatInput({ onSend, disabled }: { onSend: (text: string) => void, disabled: boolean }) {
   const [text, setText] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    }
+  }, [text]);
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (text.trim() && !disabled) {
+      onSend(text.trim());
+      setText('');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (text.trim() && !disabled) {
-        onSend(text);
-        setText('');
-      }
+      handleSubmit();
     }
   };
 
   return (
-    <div className="border-t border-gray-200 p-4 bg-white">
-      <div className="max-w-3xl mx-auto flex gap-4">
-        <textarea
-          value={text}
-          onChange={e => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask a legal question... (Shift+Enter for newline)"
-          className="flex-1 border border-gray-300 p-3 resize-none h-14 outline-none focus:border-black font-sans"
-          disabled={disabled}
-        />
-        <button
-          onClick={() => {
-            if (text.trim() && !disabled) {
-              onSend(text);
-              setText('');
-            }
-          }}
-          disabled={!text.trim() || disabled}
-          className="border border-black bg-black text-white px-6 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+    <div className="p-4 md:p-6 bg-white shrink-0">
+      <div className="max-w-3xl mx-auto relative">
+        <form 
+          onSubmit={handleSubmit}
+          className="relative flex items-end border border-zinc-200 bg-white rounded-2xl shadow-sm focus-within:border-zinc-300 focus-within:ring-[3px] focus-within:ring-zinc-100 transition-all overflow-hidden"
         >
-          Send
-        </button>
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask a legal question..."
+            disabled={disabled}
+            rows={1}
+            className="w-full max-h-[200px] py-4 pl-5 pr-14 bg-transparent border-0 focus:ring-0 resize-none outline-none text-zinc-900 placeholder:text-zinc-400 text-base"
+          />
+          <div className="absolute right-2 bottom-2">
+            <button
+              type="submit"
+              disabled={disabled || !text.trim()}
+              className="p-2 rounded-xl bg-black text-white hover:bg-zinc-800 disabled:bg-zinc-100 disabled:text-zinc-400 transition-colors flex items-center justify-center"
+            >
+              <ArrowUp size={20} strokeWidth={2.5} />
+            </button>
+          </div>
+        </form>
+        <div className="text-center mt-3 text-xs text-zinc-400 font-medium">
+          LegalEase provides informational responses based on the Indian Penal Code. Not legal advice.
+        </div>
       </div>
     </div>
   );

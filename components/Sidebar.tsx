@@ -1,11 +1,13 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { Plus, MessageSquare, Menu, X } from 'lucide-react';
 
 export default function Sidebar() {
   const [sessions, setSessions] = useState<any[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
@@ -17,27 +19,87 @@ export default function Sidebar() {
       .catch(console.error);
   }, [pathname]);
 
+  const handleNewChat = async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/sessions', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ title: 'New Chat' }) 
+      });
+      const data = await res.json();
+      if (data.id) {
+        router.push(`/chat/${data.id}`);
+        setIsOpen(false);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
-    <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-gray-200 bg-gray-50 flex flex-col h-auto md:h-full shrink-0">
-      <div className="p-4 border-b border-gray-200">
-        <Link 
-          href="/" 
-          className="block w-full text-center border border-black bg-white text-black py-2 hover:bg-gray-100 font-medium"
-        >
-          New chat
-        </Link>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {sessions.map(s => (
-          <Link
-            key={s.id}
-            href={`/chat/${s.id}`}
-            className={`block truncate p-2 border ${pathname === `/chat/${s.id}` ? 'border-black bg-white font-medium' : 'border-transparent hover:border-gray-300'} text-sm`}
+    <>
+      {/* Mobile Toggle */}
+      <button 
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white border border-zinc-200 rounded-lg shadow-sm"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {isOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
+
+      {/* Sidebar Overlay */}
+      {isOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/20 z-40"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={`
+        fixed md:static inset-y-0 left-0 z-40 w-72 bg-[#fafafa] border-r border-zinc-200 flex flex-col transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+        <div className="p-4 md:p-6 pb-4">
+          <h1 className="text-xl font-bold tracking-tight text-black mb-6">LegalEase</h1>
+          <button 
+            onClick={handleNewChat}
+            className="w-full flex items-center justify-center gap-2 bg-black text-white px-4 py-2.5 rounded-lg font-medium hover:bg-zinc-800 transition-colors shadow-sm"
           >
-            {s.title}
-          </Link>
-        ))}
+            <Plus size={18} strokeWidth={2.5} />
+            <span>New Chat</span>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3 pb-6">
+          <div className="text-xs font-semibold text-zinc-400 uppercase tracking-widest px-3 mb-3 mt-4">Recent</div>
+          {sessions.length === 0 ? (
+            <div className="px-3 text-sm text-zinc-400">No recent chats</div>
+          ) : (
+            <div className="space-y-1">
+              {sessions.map((s) => {
+                const isActive = pathname === `/chat/${s.id}`;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      router.push(`/chat/${s.id}`);
+                      setIsOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-3 truncate ${
+                      isActive 
+                        ? 'bg-zinc-200/60 text-black font-medium' 
+                        : 'text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-900'
+                    }`}
+                  >
+                    <MessageSquare size={16} className="shrink-0 opacity-60" />
+                    <span className="truncate">{s.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
+import { Scale } from 'lucide-react';
 
 export default function ChatWindow({ sessionId, initialMessages = [] }: { sessionId: string, initialMessages?: any[] }) {
   const [messages, setMessages] = useState<any[]>(initialMessages);
@@ -74,25 +75,36 @@ export default function ChatWindow({ sessionId, initialMessages = [] }: { sessio
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white min-w-0">
+    <div className="flex-1 flex flex-col h-[100dvh] bg-white min-w-0 pt-14 md:pt-0">
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 md:p-8"
+        className="flex-1 overflow-y-auto px-4 md:px-8 pt-8 md:pt-12 pb-4 scrollbar-hide"
       >
         <div className="max-w-3xl mx-auto w-full">
           {messages.length === 0 ? (
-            <div className="text-center text-gray-500 mt-20 border border-gray-200 p-8">
-              <h2 className="text-black font-medium mb-2 text-lg">Welcome to LegalEase</h2>
-              <p>Ask a legal question related to the Indian Penal Code to begin.</p>
+            <div className="flex flex-col items-center justify-center text-center mt-20 md:mt-32 max-w-lg mx-auto">
+              <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center text-white mb-6 shadow-sm">
+                <Scale size={32} strokeWidth={2} />
+              </div>
+              <h2 className="text-3xl font-semibold tracking-tight text-black mb-3">
+                How can I help you today?
+              </h2>
+              <p className="text-zinc-500 text-lg">
+                Ask any legal question related to the Indian Penal Code to receive a fully grounded answer.
+              </p>
             </div>
           ) : (
-            messages.map((m, i) => (
-              <MessageBubble key={i} role={m.role} content={m.content} sources={m.sources} />
-            ))
+            <div className="pb-8">
+              {messages.map((m, i) => (
+                <MessageBubble key={i} role={m.role} content={m.content} sources={m.sources} />
+              ))}
+            </div>
           )}
         </div>
       </div>
-      <ChatInput onSend={sendMessage} disabled={isStreaming} />
+      <div className="shrink-0 bg-gradient-to-t from-white via-white to-transparent pt-4">
+        <ChatInput onSend={sendMessage} disabled={isStreaming} />
+      </div>
     </div>
   );
 }
