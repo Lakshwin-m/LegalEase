@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
-import { Search, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, ArrowLeft, ChevronDown, ChevronUp, BookA } from 'lucide-react';
 
 interface LegalTerm {
   term: string;
@@ -37,8 +37,8 @@ export default function DictionaryPage() {
       })
       .catch(console.error);
 
-    // Load all terms initially
-    fetchTerms('', '');
+    // Do not load all terms initially
+    // fetchTerms('', '');
   }, []);
 
   const fetchTerms = async (q: string, category: string) => {
@@ -151,6 +151,12 @@ export default function DictionaryPage() {
               <div className="flex items-center gap-4 py-16 justify-center">
                 <div className="w-6 h-6 border-2 border-[#C84B31] border-t-transparent rounded-full animate-spin" />
                 <span className="text-[#5C4A42] font-medium">Loading...</span>
+              </div>
+            ) : (!query && !activeCategory) ? (
+              <div className="text-center py-20 bg-white border-2 border-[#2C1A12]/10 max-w-2xl mx-auto mt-8">
+                <BookA size={48} strokeWidth={1.5} className="mx-auto text-[#C84B31] mb-4 opacity-50" />
+                <p className="text-[#2C1A12] text-2xl font-bold mb-2">Dictionary</p>
+                <p className="text-[#5C4A42] text-lg">Search for a legal term or select a category above to view definitions.</p>
               </div>
             ) : terms.length === 0 ? (
               <div className="text-center py-16">

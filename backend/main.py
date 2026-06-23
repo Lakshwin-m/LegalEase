@@ -10,7 +10,7 @@ from .database import get_db_connection
 from .ipc import search_ipc
 from .seed import seed_database
 
-app = FastAPI(title="LegalEase Backend")
+app = FastAPI(title="URIM-AI Backend")
 print("Starting FastAPI Backend...")
 
 app.add_middleware(
@@ -120,7 +120,9 @@ Do NOT use English at all. Not even for section numbers — write them as numera
 If the user writes in English, you still reply in {language}.
 Start your response with a greeting in {language}."""
 
-    system_prompt = f"""You are a friendly Indian law (IPC) assistant.
+    system_prompt = f"""You are MEI (Multilingual Engine for Information). You are an AI created for URIM-AI. 
+Your purpose is to act as a friendly, accessible Indian law assistant. You help people understand their rights and the Indian Penal Code (IPC) without confusing legal jargon.
+If a user asks who you are or what your purpose is, kindly introduce yourself as MEI and explain your role in {language}.
 {lang_instruction}
 
 IPC SECTIONS:
@@ -307,17 +309,47 @@ def get_dictionary(q: str = "", category: str = ""):
     """Search legal terms dictionary."""
     results = LEGAL_TERMS
     
+    if not q.strip() and not category:
+        return {"results": [], "total": 0}
+    
     if category:
         results = [t for t in results if t["category"].lower() == category.lower()]
     
     if q.strip():
+        import difflib
         q_lower = q.strip().lower()
-        results = [
-            t for t in results 
-            if q_lower in t["term"].lower() 
-            or q_lower in t.get("full_form", "").lower()
-            or q_lower in t["definition"].lower()
-        ]
+        
+        def get_match_score(t):
+            term_lower = t["term"].lower()
+            full_form_lower = t.get("full_form", "").lower()
+            definition_lower = t["definition"].lower()
+            
+            # Exact match gives highest score
+            if q_lower == term_lower: return 100
+            if q_lower == full_form_lower: return 95
+            
+            # Substring match gives high score
+            if q_lower in term_lower: return 90
+            if q_lower in full_form_lower: return 85
+            
+            # Fuzzy match on term
+            ratio = difflib.SequenceMatcher(None, q_lower, term_lower).ratio()
+            if ratio > 0.65: return 70 + (ratio * 10)
+            
+            # Substring match in definition
+            if q_lower in definition_lower: return 60
+            
+            # Word level match in definition
+            words_in_def = sum(1 for w in q_lower.split() if w in definition_lower)
+            if words_in_def > 0 and words_in_def == len(q_lower.split()):
+                return 50
+                
+            return 0
+
+        scored_results = [(t, get_match_score(t)) for t in results]
+        # Filter out zero scores and sort by highest score
+        filtered_sorted = sorted([item for item in scored_results if item[1] > 0], key=lambda x: x[1], reverse=True)
+        results = [item[0] for item in filtered_sorted]
     
     return {"results": results, "total": len(results)}
 

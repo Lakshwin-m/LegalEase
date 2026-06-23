@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "LegalEase",
-  description: "Local-first AI legal assistant",
+  title: "URIM-AI",
+  description: "Your multilingual Indian legal assistant",
 };
 
 export default function RootLayout({
