@@ -57,7 +57,7 @@ export default function ChatWindow({ sessionId, initialMessages = [] }: { sessio
     if (!currentSid) {
       try {
         const title = text.length > 30 ? text.substring(0, 30) + '...' : text;
-        const res = await fetch('http://127.0.0.1:8000/api/sessions', {
+        const res = await fetch('/api/sessions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title })
@@ -75,7 +75,7 @@ export default function ChatWindow({ sessionId, initialMessages = [] }: { sessio
     }
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: currentSid, message: text, language })
